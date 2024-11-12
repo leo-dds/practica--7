@@ -13,7 +13,7 @@ services:
     container_name: dns_server
     networks:
       dns_network:
-        ipv4_address: 10.0.2.15
+        ipv4_address: 172.18.0.2
     volumes:
       - ./bind_config:/etc/bind
     environment:
@@ -36,4 +36,45 @@ networks:
       config:
         - subnet: 172.18.0.0/16
 ~~~
+3.- named.conf (Configuración principal de bind9)
+~~~
+cat named.conf
 
+options {
+    directory "/var/cache/bind";
+
+    forwarders {
+        8.8.8.8; // Google DNS como ejemplo
+        8.8.4.4;
+    };
+
+    allow-query { any; };
+};
+
+zone "mizona.int" {
+    type master;
+    file "/etc/bind/db.mizona.int";
+};
+~~~
+
+4.- db.mizona.int (Configuración de la zona DNS)
+
+~~~
+cat db.mizona.int 
+
+$TTL    604800
+@       IN      SOA     ns.mizona.int. admin.mizona.int. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+
+@       IN      NS      ns.mizona.int.
+ns      IN      A       172.18.0.2
+www     IN      CNAME   ns.mizona.int.
+mail    IN      A       172.18.0.2
+@       IN      TXT     "Bienvenido a mizona.int"
+
+~~~
