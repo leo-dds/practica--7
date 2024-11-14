@@ -1,10 +1,9 @@
  [#practica-7](https://github.com/leo-dds/practica--7.git)
 
-1.- Creamos el contenedor con **docker run -dit --name dns_cliente alpine**
 
-2.-Archivo  docker-compose.yml:
+1.-Archivo  docker-compose.yml:
 ~~~
-  sri@sri-VirtualBox:~/Docker$ cat docker-compose.yml 
+sri@sri-VirtualBox:~/Docker$ cat docker-compose.yml 
 version: '3.8'
 
 services:
@@ -18,7 +17,7 @@ services:
       - ./bind_config:/etc/bind
     environment:
       - BIND9_USER=root
-    command: ["-g", "-c", "/etc/bind/named.conf"]
+    command: ["/usr/sbin/named", "-g", "-c", "/etc/bind/named.conf"]
 
   dns_client:
     image: alpine
@@ -35,46 +34,56 @@ networks:
     ipam:
       config:
         - subnet: 172.18.0.0/16
+
+
 ~~~
+
+2.-Lanzamos **docker-compose up -d** 
+sri@sri-VirtualBox:~/Docker$ sudo docker-compose up -d 
+[+] Running 2/2
+ ✔ Container dns_server   Started                                          0.0s 
+ ✔ Container dns_cliente  Started  
+
 3.- named.conf (Configuración principal de bind9)
 ~~~
-cat named.conf
+cat named.conf.local 
+//
+// Do any local configuration here
+//
 
-options {
-    directory "/var/cache/bind";
+// Consider adding the 1918 zones here, if they are not used in your
+// organization
+//include "/etc/bind/zones.rfc1918";
 
-    forwarders {
-        8.8.8.8; // Google DNS como ejemplo
-        8.8.4.4;
-    };
-
-    allow-query { any; };
+zone "leo.castelao.org" {
+	type master;
+	file "/etc/bind/db.leo.castelao.org";
 };
 
-zone "mizona.int" {
+zone "1.168.192.in-addr.arpa" {
     type master;
-    file "/etc/bind/db.mizona.int";
+    file "/etc/bind/db.192";
 };
-~~~
-
-4.- db.mizona.int (Configuración de la zona DNS)
 
 ~~~
-cat db.mizona.int 
 
-$TTL    604800
-@       IN      SOA     ns.mizona.int. admin.mizona.int. (
-                              2         ; Serial
-                         604800         ; Refresh
-                          86400         ; Retry
-                        2419200         ; Expire
-                         604800 )       ; Negative Cache TTL
+4.- db.leo.castelao.org (Configuración de la zona DNS)
+
+~~~
+sudo cat db.leo.castelao.org 
 ;
-
-@       IN      NS      ns.mizona.int.
-ns      IN      A       172.18.0.2
-www     IN      CNAME   ns.mizona.int.
-mail    IN      A       172.18.0.2
-@       IN      TXT     "Bienvenido a mizona.int"
+; BIND data file for local loopback interface
+;
+$TTL	604800
+@	IN	SOA	localhost. root.localhost. (
+			      2		; Serial
+			 604800		; Refresh
+			  86400		; Retry
+			2419200		; Expire
+			 604800 )	; Negative Cache TTL
+;
+@	IN	NS	localhost.
+@	IN	A	192.168.1.10
+@	IN	AAAA	::1
 
 ~~~
